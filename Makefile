@@ -3,7 +3,7 @@ comp:
 link:
 	ld -m elf_i386 test.o -o snake
 spc:
-	gcc -no-pie main.o -o ./bin/snake
+	gcc -no-pie main.o $$(pkg-config --cflags --libs sdl2 SDL2_ttf)  -o ./bin/snake
 run-asm: comp spc
 	./bin/snake
 run-example:
