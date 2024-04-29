@@ -18,6 +18,12 @@ create_renderer_err_msg db "SDL_CreateRenderer Error: %s", 10, 0
 render_fill_error_msg db "SDL_RenderFillRect Error: %s", 10, 0
 update_window_surface_error_msg db "SDL_UpdateWindowSurface Error: %s", 10, 0
 set_render_draw_color_error_msg db "SDL_SetRenderDrawColor Error: %s", 10, 0 
+log_here_msg db "Logged here", 10, 0 
+left_arrow_pressed_msg db "left_arrow_pressed_msg", 10, 0 
+right_arrow_pressed_msg db "right_arrow_pressed_msg", 10, 0 
+up_arrow_pressed_msg db "up_arrow_pressed_msg", 10, 0 
+down_arrow_pressed_msg db "down_arrow_pressed_msg", 10, 0 
+exited_msg db "exited", 10, 0 
 is_game_running db 0
 
 event db 56 dup (?) ; SDL_Event type
@@ -59,14 +65,14 @@ extrn SDL_GetWindowSurface
 extrn SDL_PollEvent
 
 main:
-    mov rbp, rsp; for correct debugging
-    and rsp, -16
+    push rsp
+	;mov rbp, rsp; for correct debugging
+    ;and rsp, -16
 
     mov rdi, 62001
 	call SDL_Init
 	cmp rax, 0
 	jl init_err
-
 
 	mov rdi, create_window_arg0
 	mov rsi, 100
@@ -109,19 +115,48 @@ eventHandlingLoop:
 
 	lea rax, [sdl_eventbuf]
 	cmp dword[rax], 0x0100 ; SDL_QUIT
-	jne not_quit
+	jne .not_quit
 	
 	mov [is_game_running], 0
-	jmp eventHandlingLoop
+	jmp afterEventHandling
 
-not_quit:
-	cmp dword[rax], 0x0300; SQL_KEYDOWN
+.not_quit:
+	cmp dword[rax], 0x0300; SDL_KEYDOWN
 	jne afterEventHandling
 
-	;xor rdi, rdi
+	;call log_here_message
+	;call log_here_message
+	xor rdi, rdi
 	;mov rdi, qword[rax+20]
 
+	mov edi, dword [rax+20]  ; kev.keysym.sym
 
+	cmp rdi, 1073741904 ; left arrow
+	jne .not_left
+	
+	call handle_left_arrow_key
+	jmp afterEventHandling
+
+.not_left:
+	cmp rdi, 1073741903 ; right arrow
+	jne .not_right
+
+	call handle_right_arrow_key
+	jmp afterEventHandling
+
+.not_right:
+	cmp rdi, 1073741906 ; up arrow
+	jne .not_up
+	
+	call handle_up_arrow_key
+	jmp afterEventHandling
+
+.not_up:
+	cmp rdi, 1073741905 ; down arrow
+	jne eventHandlingLoop
+
+	call handle_down_arrow_key
+	jmp afterEventHandling
 
 afterEventHandling:
     mov rdi, [window]
@@ -181,16 +216,19 @@ afterEventHandling:
 	cmp [is_game_running], 0
 	jne game_loop
 
-    mov rdi, r13
+    mov rdi, [renderer]
 	call SDL_DestroyRenderer
-	mov rdi, r12
+	mov rdi, [window]
 	call SDL_DestroyWindow
 	call SDL_Quit
 	mov rdi, 0
 	jmp exit
 exit:
-    mov rsp, rbp
-    xor rax, rax
+	mov rdi, exited_msg
+	call printMessage
+
+	pop rsp
+	xor rax, rax
 
     ret
 
@@ -252,3 +290,47 @@ set_render_draw_color_error:
 	call SDL_Quit
 	mov rdi, 8
 	jmp exit
+log_here_message:
+	mov rbp, rsp; for correct debugging
+	and rsp, -16
+
+	mov rdi, formatStr
+	mov rsi, log_here_msg
+	call printf
+	
+	mov rsp, rbp
+	xor rax, rax
+
+	ret
+printMessage:
+	mov rbp, rsp; for correct debugging
+	and rsp, -16
+
+	;mov rdi, formatStr
+	;mov rsi, log_here_msg
+	call printf
+	
+	mov rsp, rbp
+	xor rax, rax
+
+	ret
+handle_left_arrow_key:
+	mov rdi, left_arrow_pressed_msg
+	call printMessage
+
+	ret
+handle_right_arrow_key:
+	mov rdi, right_arrow_pressed_msg
+	call printMessage
+
+	ret
+handle_up_arrow_key:
+	mov rdi, up_arrow_pressed_msg
+	call printMessage
+
+	ret
+handle_down_arrow_key:
+	mov rdi, down_arrow_pressed_msg
+	call printMessage
+
+	ret
