@@ -26,15 +26,20 @@ down_arrow_pressed_msg db "down_arrow_pressed_msg", 10, 0
 exited_msg db "exited", 10, 0 
 is_game_running db 0
 
+snake_direction db 1
+
 event db 56 dup (?) ; SDL_Event type
 sdl_eventbuf rq 256/8
 
 mainRect SDL_Rect 0,0,0,0
 snakeRect SDL_Rect 10,10,10,10
 
+snake_x dq 0
+
 window rq 1
 renderer rq 1
 
+snake_movement_counter dq 0
 
 ; Code segment 
 section ".text" executable
@@ -159,6 +164,7 @@ eventHandlingLoop:
 	jmp afterEventHandling
 
 afterEventHandling:
+	call updage_game_state
 
     mov rdi, [window]
     call SDL_UpdateWindowSurface
@@ -174,6 +180,7 @@ afterEventHandling:
 
     mov rdi, 10
 	call SDL_Delay
+	add [snake_movement_counter], 10
 
 	cmp [is_game_running], 0
 	jne game_loop
@@ -250,7 +257,7 @@ set_render_draw_color_error:
 	mov rdi, r12
 	call SDL_DestroyWindow
 	call SDL_Quit
-	mov rdi, 8
+	mov rdi, 8 ; TODO: maybe delete this?
 	jmp exit
 log_here_message:
 	mov rbp, rsp; for correct debugging
@@ -328,7 +335,9 @@ display_snake:
     cmp rax, 0
 	jne set_render_draw_color_error
     
-	mov [snakeRect.x], 0
+	mov edi, dword[snake_x]
+
+	mov [snakeRect.x], edi
     mov [snakeRect.y], 0
     mov [snakeRect.w], 50
     mov [snakeRect.h], 50
@@ -340,3 +349,16 @@ display_snake:
 	jne render_fill_error
 
 	ret	
+updage_game_state:
+	cmp [snake_movement_counter], 500
+	jne .end_update_game_state
+
+	mov [snake_movement_counter], 0
+	cmp [snake_direction], 1
+	jne .end_update_game_state
+	
+	add [snake_x], 10
+
+.end_update_game_state:
+	
+	ret
