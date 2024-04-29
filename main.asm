@@ -107,13 +107,13 @@ main:
 game_loop:
 
 eventHandlingLoop:
-	lea rdi,[sdl_eventbuf] ; TODO: I have no idea why it works
+	mov rdi,sdl_eventbuf
 	call SDL_PollEvent
 
 	cmp rax, 0
 	je afterEventHandling
 
-	lea rax, [sdl_eventbuf]
+	mov rax, sdl_eventbuf
 	cmp dword[rax], 0x0100 ; SDL_QUIT
 	jne .not_quit
 	
@@ -159,53 +159,15 @@ eventHandlingLoop:
 	jmp afterEventHandling
 
 afterEventHandling:
+
     mov rdi, [window]
     call SDL_UpdateWindowSurface
     cmp rax, 0
 	jne update_window_surface_error
     
-    mov rdi, [renderer]
-	mov rsi, 160
-	mov rdx, 160
-	mov rcx, 160
-	mov r8, 0
-    call SDL_SetRenderDrawColor
-    cmp rax, 0
-	jne set_render_draw_color_error
+    call display_main_scene
 
-    mov [mainRect.x], 0
-    mov [mainRect.y], 0
-    mov [mainRect.w], 480
-    mov [mainRect.h], 480
-
-    mov rdi, [renderer]
-    mov rsi, mainRect
-    call SDL_RenderFillRect
-	cmp rax, 0
-	jne render_fill_error
-
-
-;////
-    mov rdi, [renderer]
-	mov rsi, 255
-	mov rdx, 0
-	mov rcx, 0
-	mov r8, 0
-    call SDL_SetRenderDrawColor
-    cmp rax, 0
-	jne set_render_draw_color_error
-    
-	mov [snakeRect.x], 0
-    mov [snakeRect.y], 0
-    mov [snakeRect.w], 50
-    mov [snakeRect.h], 50
-
-    mov rdi, [renderer]
-    mov rsi, snakeRect
-    call SDL_RenderFillRect
-	cmp rax, 0
-	jne render_fill_error
-;////
+    call display_snake
 
     mov rdi, [renderer]
     call SDL_RenderPresent
@@ -334,3 +296,47 @@ handle_down_arrow_key:
 	call printMessage
 
 	ret
+display_main_scene:
+	mov rdi, [renderer]
+	mov rsi, 160
+	mov rdx, 160
+	mov rcx, 160
+	mov r8, 0
+    call SDL_SetRenderDrawColor
+    cmp rax, 0
+	jne set_render_draw_color_error ; TODO: fix this message, it will throw segfault on error because of stack
+
+    mov [mainRect.x], 0
+    mov [mainRect.y], 0
+    mov [mainRect.w], 480
+    mov [mainRect.h], 480
+
+    mov rdi, [renderer]
+    mov rsi, mainRect
+    call SDL_RenderFillRect
+	cmp rax, 0
+	jne render_fill_error	
+
+	ret
+display_snake:
+	mov rdi, [renderer]
+	mov rsi, 255
+	mov rdx, 0
+	mov rcx, 0
+	mov r8, 0
+    call SDL_SetRenderDrawColor
+    cmp rax, 0
+	jne set_render_draw_color_error
+    
+	mov [snakeRect.x], 0
+    mov [snakeRect.y], 0
+    mov [snakeRect.w], 50
+    mov [snakeRect.h], 50
+
+    mov rdi, [renderer]
+    mov rsi, snakeRect
+    call SDL_RenderFillRect
+	cmp rax, 0
+	jne render_fill_error
+
+	ret	
