@@ -26,7 +26,7 @@ down_arrow_pressed_msg db "down_arrow_pressed_msg", 10, 0
 exited_msg db "exited", 10, 0 
 is_game_running db 0
 
-snake_direction db 1
+snake_direction db 2
 
 event db 56 dup (?) ; SDL_Event type
 sdl_eventbuf rq 256/8
@@ -35,6 +35,7 @@ mainRect SDL_Rect 0,0,0,0
 snakeRect SDL_Rect 10,10,10,10
 
 snake_x dq 0
+snake_y dq 0
 
 window rq 1
 renderer rq 1
@@ -284,21 +285,29 @@ printMessage:
 
 	ret
 handle_left_arrow_key:
+	mov [snake_direction], 1
+
 	mov rdi, left_arrow_pressed_msg
 	call printMessage
 
 	ret
 handle_right_arrow_key:
+	mov [snake_direction], 2
+
 	mov rdi, right_arrow_pressed_msg
 	call printMessage
 
 	ret
 handle_up_arrow_key:
+	mov [snake_direction], 3
+
 	mov rdi, up_arrow_pressed_msg
 	call printMessage
 
 	ret
 handle_down_arrow_key:
+	mov [snake_direction], 4
+
 	mov rdi, down_arrow_pressed_msg
 	call printMessage
 
@@ -338,7 +347,10 @@ display_snake:
 	mov edi, dword[snake_x]
 
 	mov [snakeRect.x], edi
-    mov [snakeRect.y], 0
+	
+	mov edi, dword[snake_y]
+
+    mov [snakeRect.y], edi
     mov [snakeRect.w], 50
     mov [snakeRect.h], 50
 
@@ -354,10 +366,29 @@ updage_game_state:
 	jne .end_update_game_state
 
 	mov [snake_movement_counter], 0
+
 	cmp [snake_direction], 1
-	jne .end_update_game_state
-	
+	jne .not_left_direction
+
+	sub [snake_x], 10
+	jmp .end_update_game_state
+.not_left_direction:
+	cmp [snake_direction], 2
+	jne .not_right_direction
+
 	add [snake_x], 10
+	jmp .end_update_game_state	
+.not_right_direction:	
+	cmp [snake_direction], 3
+	jne .not_up_direction
+
+	sub [snake_y], 10
+	jmp .end_update_game_state
+.not_up_direction:	
+	cmp [snake_direction], 4
+	jne .end_update_game_state
+
+	add [snake_y], 10
 
 .end_update_game_state:
 	
