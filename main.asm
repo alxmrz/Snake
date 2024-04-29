@@ -20,6 +20,8 @@ update_window_surface_error_msg db "SDL_UpdateWindowSurface Error: %s", 10, 0
 set_render_draw_color_error_msg db "SDL_SetRenderDrawColor Error: %s", 10, 0 
 
 mainRect SDL_Rect 0,0,0,0
+snakeRect SDL_Rect 10,10,10,10
+
 window rq 1
 renderer rq 1
 
@@ -96,8 +98,8 @@ main:
     
     mov rdi, [renderer]
 	mov rsi, 160
-	mov rdx, 0
-	mov rcx, 0
+	mov rdx, 160
+	mov rcx, 160
 	mov r8, 0
     call SDL_SetRenderDrawColor
     cmp rax, 0
@@ -109,10 +111,33 @@ main:
     mov [mainRect.h], 480
 
     mov rdi, [renderer]
-    mov rsi, [mainRect]
+    mov rsi, mainRect
     call SDL_RenderFillRect
 	cmp rax, 0
 	jne render_fill_error
+
+
+;////
+    mov rdi, [renderer]
+	mov rsi, 255
+	mov rdx, 0
+	mov rcx, 0
+	mov r8, 0
+    call SDL_SetRenderDrawColor
+    cmp rax, 0
+	jne set_render_draw_color_error
+    
+	mov [snakeRect.x], 0
+    mov [snakeRect.y], 0
+    mov [snakeRect.w], 50
+    mov [snakeRect.h], 50
+
+    mov rdi, [renderer]
+    mov rsi, snakeRect
+    call SDL_RenderFillRect
+	cmp rax, 0
+	jne render_fill_error
+;////
 
     mov rdi, [renderer]
     call SDL_RenderPresent

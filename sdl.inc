@@ -1,7 +1,7 @@
-struc SDL_Rect x,y,w,h
+struc SDL_Rect x,y,width,height
 {
-    .x dq x
-    .y dq y
-    .w dq w
-    .h dq h
+    .x dd x
+    .y dd y
+    .w dd width
+    .h dd height
 }
