@@ -18,6 +18,10 @@ create_renderer_err_msg db "SDL_CreateRenderer Error: %s", 10, 0
 render_fill_error_msg db "SDL_RenderFillRect Error: %s", 10, 0
 update_window_surface_error_msg db "SDL_UpdateWindowSurface Error: %s", 10, 0
 set_render_draw_color_error_msg db "SDL_SetRenderDrawColor Error: %s", 10, 0 
+is_game_running db 0
+
+event db 56 dup (?) ; SDL_Event type
+sdl_eventbuf rq 256/8
 
 mainRect SDL_Rect 0,0,0,0
 snakeRect SDL_Rect 10,10,10,10
@@ -52,6 +56,7 @@ extrn SDL_SetRenderDrawColor
 extrn SDL_RenderFillRect
 extrn SDL_RenderDrawRect
 extrn SDL_GetWindowSurface
+extrn SDL_PollEvent
 
 main:
     mov rbp, rsp; for correct debugging
@@ -91,6 +96,34 @@ main:
     cmp rax, 0
     je create_window_err
 
+	mov [is_game_running], 1
+
+game_loop:
+
+eventHandlingLoop:
+	lea rdi,[sdl_eventbuf] ; TODO: I have no idea why it works
+	call SDL_PollEvent
+
+	cmp rax, 0
+	je afterEventHandling
+
+	lea rax, [sdl_eventbuf]
+	cmp dword[rax], 0x0100 ; SDL_QUIT
+	jne not_quit
+	
+	mov [is_game_running], 0
+	jmp eventHandlingLoop
+
+not_quit:
+	cmp dword[rax], 0x0300; SQL_KEYDOWN
+	jne afterEventHandling
+
+	;xor rdi, rdi
+	;mov rdi, qword[rax+20]
+
+
+
+afterEventHandling:
     mov rdi, [window]
     call SDL_UpdateWindowSurface
     cmp rax, 0
@@ -142,8 +175,11 @@ main:
     mov rdi, [renderer]
     call SDL_RenderPresent
 
-    mov rdi, 2000
+    mov rdi, 10
 	call SDL_Delay
+
+	cmp [is_game_running], 0
+	jne game_loop
 
     mov rdi, r13
 	call SDL_DestroyRenderer
