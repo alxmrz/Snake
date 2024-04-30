@@ -149,7 +149,7 @@ eventHandlingLoop:
 
 .not_quit:
 	cmp dword[rax], 0x0300; SDL_KEYDOWN
-	jne afterEventHandling
+	jne eventHandlingLoop
 
 	;call log_here_message
 	;call log_here_message
