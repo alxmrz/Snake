@@ -30,7 +30,7 @@ loop_counter dq 0
 
 snake_direction db 2
 snake_parts dd 50 dup (-1,-1) ; 100 bytes for 50 snake parts (0 - x, 1 - y), (2 - x, 3 - y)  ... etc
-
+snake_parts_count dd 0
 event db 56 dup (?) ; SDL_Event type
 sdl_eventbuf rq 256/8
 
@@ -127,7 +127,7 @@ main:
     je create_window_err
 
 	call create_food
-	call add_snake_part
+	call create_snake
 
 	mov [is_game_running], 1
 
@@ -479,8 +479,16 @@ updage_game_state:
 
 .end_update_game_state:
 	
+	call is_snake_collided_food
+	cmp rax, 0
+	je .not_collided
+
+	call add_snake_part
+	call create_food
+
+.not_collided:
 	ret
-add_snake_part:
+create_snake:
 	mov [snake_parts], 100
 	mov [snake_parts+4], 50
 	
@@ -489,6 +497,24 @@ add_snake_part:
 
 	mov [snake_parts+16], 0
 	mov [snake_parts+20], 50
+
+	mov [snake_parts_count], 3
+
+	ret
+
+add_snake_part:
+	mov rax, qword[snake_parts_count]
+	mov rdx, 8
+
+	mul rdx
+
+	mov edi, [snake_parts+rax-8]
+	mov [snake_parts+rax], edi
+
+	mov edi, [snake_parts+rax-4]
+	mov [snake_parts+rax+4], edi
+
+	inc [snake_parts_count]
 
 	ret
 
@@ -640,3 +666,19 @@ get_random_coord:
 	mov rax, r8
 
 	ret
+is_snake_collided_food:
+	mov edi, [foodX]
+	cmp [snake_parts], edi
+	jne .snake_not_collided
+
+	mov edi, [foodY]
+	cmp [snake_parts+4], edi
+	jne .snake_not_collided
+
+.snake_collided:
+	mov rax, 1
+	jmp .end
+.snake_not_collided:
+	mov rax, 0
+.end:
+	ret	
