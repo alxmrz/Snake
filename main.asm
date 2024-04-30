@@ -37,6 +37,10 @@ sdl_eventbuf rq 256/8
 mainRect SDL_Rect 0,0,0,0
 snakeRect SDL_Rect 10,10,10,10
 
+foodRect SDL_Rect 0, 0, 0, 0
+foodX dd 0
+foodY dd 0
+
 snake_x dq 0
 snake_y dq 0
 
@@ -47,6 +51,9 @@ snake_movement_counter dq 0
 
 GAME_AREA_WIDTH = 500
 GAME_AREA_HEIGHT = 500
+
+SEED_X = 100
+SEED_Y = 200
 
 ; Code segment 
 section ".text" executable
@@ -75,6 +82,9 @@ extrn SDL_RenderFillRect
 extrn SDL_RenderDrawRect
 extrn SDL_GetWindowSurface
 extrn SDL_PollEvent
+extrn random
+extrn srand
+extrn time
 
 main:
     push rsp
@@ -116,6 +126,7 @@ main:
     cmp rax, 0
     je create_window_err
 
+	call create_food
 	call add_snake_part
 
 	mov [is_game_running], 1
@@ -185,6 +196,7 @@ afterEventHandling:
     call display_main_scene
 
     call display_snake
+	call display_food
 
     mov rdi, [renderer]
     call SDL_RenderPresent
@@ -404,6 +416,35 @@ display_snake:
 	jne .foreach_snake_parts
 
 	ret	
+
+display_food:
+	mov rdi, [renderer]
+	mov rsi, 255
+	mov rdx, 0
+	mov rcx, 255
+	mov r8, 0
+    call SDL_SetRenderDrawColor
+    cmp rax, 0
+	jne set_render_draw_color_error
+    
+	mov [loop_counter], 0
+
+	mov edi, [foodX]
+	mov esi, [foodY]
+
+	mov [foodRect.x], edi
+    mov [foodRect.y], esi
+    mov [foodRect.w], 50
+    mov [foodRect.h], 50
+
+    mov rdi, [renderer]
+    mov rsi, foodRect
+    call SDL_RenderFillRect
+	cmp rax, 0
+	jne render_fill_error
+
+	ret	
+
 updage_game_state:
 	cmp [snake_movement_counter], 100
 	jne .end_update_game_state
@@ -552,5 +593,50 @@ move_snake_body:
 
 	cmp [snake_parts+r12], -1
 	jne .for_every_part
+
+	ret
+create_food:
+	mov rdi, SEED_X
+	call get_random_coord
+
+	mov [foodX], eax
+
+	mov rdi, SEED_Y
+	call get_random_coord
+
+	mov [foodY], eax
+
+	ret	
+
+get_random_coord:
+
+	push rdi ; rdi - passed seed for random
+
+	mov rdi, 0x00
+	call time
+
+	pop rdi
+	add rax, rdi
+
+	mov rdi, rax
+	call srand
+.random:
+	call random
+
+	mov rcx, GAME_AREA_WIDTH
+	mov rdx, 0
+	div rcx
+
+	mov r8, rdx
+
+	mov rax, r8
+	mov rcx, 50 ; check that random_coord % 50 equal to 0 for correct snake and food colision
+	mov rdx, 0
+	div rcx
+
+	cmp rdx, 0
+	jne .random
+
+	mov rax, r8
 
 	ret
