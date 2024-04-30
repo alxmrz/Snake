@@ -45,6 +45,9 @@ renderer rq 1
 
 snake_movement_counter dq 0
 
+GAME_AREA_WIDTH = 500
+GAME_AREA_HEIGHT = 500
+
 ; Code segment 
 section ".text" executable
 
@@ -345,8 +348,8 @@ display_main_scene:
 
     mov [mainRect.x], 0
     mov [mainRect.y], 0
-    mov [mainRect.w], 480
-    mov [mainRect.h], 480
+    mov [mainRect.w], GAME_AREA_WIDTH
+    mov [mainRect.h], GAME_AREA_HEIGHT
 
     mov rdi, [renderer]
     mov rsi, mainRect
@@ -402,7 +405,7 @@ display_snake:
 
 	ret	
 updage_game_state:
-	cmp [snake_movement_counter], 500
+	cmp [snake_movement_counter], 100
 	jne .end_update_game_state
 
 	mov [snake_movement_counter], 0
@@ -457,7 +460,13 @@ move_snake_left:
 	mov esi, [snake_parts+4]
 
 	sub dword[snake_parts], 50
+	
+	cmp dword[snake_parts], 0
+	jge .left_move_body
 
+	mov dword[snake_parts], GAME_AREA_WIDTH-50
+
+.left_move_body:
 	call move_snake_body
 
 	ret
@@ -471,6 +480,13 @@ move_snake_right:
 	mov esi, [snake_parts+4]
 
 	add dword[snake_parts], 50
+
+	cmp dword[snake_parts], GAME_AREA_WIDTH
+	jl .right_move_body
+
+	mov dword[snake_parts], 0
+
+.right_move_body:
 
 	call move_snake_body
 
@@ -486,6 +502,12 @@ move_snake_up:
 
 	sub dword[snake_parts+4], 50
 
+	cmp dword[snake_parts+4], 0
+	jge .up_move_body
+
+	mov dword[snake_parts+4], GAME_AREA_HEIGHT-50
+
+.up_move_body:
 	call move_snake_body
 
 	ret
@@ -499,6 +521,13 @@ move_snake_down:
 	mov esi, [snake_parts+4]
 
 	add dword[snake_parts+4], 50
+
+	cmp dword[snake_parts+4], GAME_AREA_HEIGHT
+	jl .down_move_body
+
+	mov dword[snake_parts+4], 0
+
+.down_move_body:
 
 	call move_snake_body
 
