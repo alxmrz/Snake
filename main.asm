@@ -6,11 +6,11 @@ section '.data' writeable
     include 'sdl.inc'
 
 
-    hello db 'Hello, +++++', 0
-    world db ' world!', 0
-    formatStr db "%s", 0
-    formatInt db "%d", 0
-    concated rb 16
+hello db 'Hello, +++++', 0
+world db ' world!', 0
+formatStr db "%s", 0
+formatInt db "%d", 0
+concated rb 16
 init_err_msg            db "SDL_Init Error: %s", 10, 0
 create_window_arg0      db "Hello World!", 0
 create_window_err_msg   db "SDL_CreateWindow Error: %s", 10, 0
@@ -26,7 +26,10 @@ down_arrow_pressed_msg db "down_arrow_pressed_msg", 10, 0
 exited_msg db "exited", 10, 0 
 is_game_running db 0
 
+loop_counter dq 0
+
 snake_direction db 2
+snake_parts db 50 dup (-1,-1) ; 100 bytes for 50 snake parts (0 - x, 1 - y), (2 - x, 3 - y)  ... etc
 
 event db 56 dup (?) ; SDL_Event type
 sdl_eventbuf rq 256/8
@@ -75,6 +78,8 @@ main:
 	;mov rbp, rsp; for correct debugging
     ;and rsp, -16
 
+	;call log_here_message
+
     mov rdi, 62001
 	call SDL_Init
 	cmp rax, 0
@@ -107,6 +112,8 @@ main:
     call SDL_GetWindowSurface
     cmp rax, 0
     je create_window_err
+
+	call add_snake_part
 
 	mov [is_game_running], 1
 
@@ -284,6 +291,20 @@ printMessage:
 	xor rax, rax
 
 	ret
+
+printInteger:
+	mov rbp, rsp; for correct debugging
+	and rsp, -16
+
+	mov rdi, formatInt
+	;mov rsi, 50
+	call printf
+	
+	mov rsp, rbp
+	xor rax, rax
+
+	ret
+
 handle_left_arrow_key:
 	mov [snake_direction], 1
 
@@ -344,21 +365,40 @@ display_snake:
     cmp rax, 0
 	jne set_render_draw_color_error
     
-	mov edi, dword[snake_x]
+	mov [loop_counter], 0
 
+.foreach_snake_parts:
+	xor rcx, rcx;
+	xor rdi, rdi;
+
+	mov rcx, [loop_counter]
+	mov dil, [snake_parts+rcx]
 	mov [snakeRect.x], edi
-	
-	mov edi, dword[snake_y]
 
+	;mov rsi, [loop_counter]
+	;call printInteger
+	;call log_here_message
+
+	mov rcx, [loop_counter]
+	mov dil,[snake_parts+rcx+1]
     mov [snakeRect.y], edi
+
     mov [snakeRect.w], 50
     mov [snakeRect.h], 50
+
+	;xor rdi, rdi
 
     mov rdi, [renderer]
     mov rsi, snakeRect
     call SDL_RenderFillRect
 	cmp rax, 0
 	jne render_fill_error
+
+	add [loop_counter], 2
+
+	mov rcx, [loop_counter]
+	cmp byte[snake_parts+rcx], -1
+	jne .foreach_snake_parts
 
 	ret	
 updage_game_state:
@@ -392,4 +432,15 @@ updage_game_state:
 
 .end_update_game_state:
 	
+	ret
+add_snake_part:
+	mov [snake_parts], 100
+	mov [snake_parts+1], 50
+	
+	mov [snake_parts+2], 50
+	mov [snake_parts+3], 50
+
+	mov [snake_parts+4], 0
+	mov [snake_parts+5], 50
+
 	ret
