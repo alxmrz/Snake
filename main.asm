@@ -29,7 +29,7 @@ is_game_running db 0
 loop_counter dq 0
 
 snake_direction db 2
-snake_parts db 50 dup (-1,-1) ; 100 bytes for 50 snake parts (0 - x, 1 - y), (2 - x, 3 - y)  ... etc
+snake_parts dd 50 dup (-1,-1) ; 100 bytes for 50 snake parts (0 - x, 1 - y), (2 - x, 3 - y)  ... etc
 
 event db 56 dup (?) ; SDL_Event type
 sdl_eventbuf rq 256/8
@@ -372,7 +372,7 @@ display_snake:
 	xor rdi, rdi;
 
 	mov rcx, [loop_counter]
-	mov dil, [snake_parts+rcx]
+	mov edi, [snake_parts+rcx]
 	mov [snakeRect.x], edi
 
 	;mov rsi, [loop_counter]
@@ -380,7 +380,7 @@ display_snake:
 	;call log_here_message
 
 	mov rcx, [loop_counter]
-	mov dil,[snake_parts+rcx+1]
+	mov edi,[snake_parts+rcx+4]
     mov [snakeRect.y], edi
 
     mov [snakeRect.w], 50
@@ -394,10 +394,10 @@ display_snake:
 	cmp rax, 0
 	jne render_fill_error
 
-	add [loop_counter], 2
+	add [loop_counter], 8
 
 	mov rcx, [loop_counter]
-	cmp byte[snake_parts+rcx], -1
+	cmp [snake_parts+rcx], -1
 	jne .foreach_snake_parts
 
 	ret	
@@ -410,37 +410,118 @@ updage_game_state:
 	cmp [snake_direction], 1
 	jne .not_left_direction
 
-	sub [snake_x], 10
+	call move_snake_left
+
 	jmp .end_update_game_state
 .not_left_direction:
 	cmp [snake_direction], 2
 	jne .not_right_direction
 
-	add [snake_x], 10
+	call move_snake_right
+
 	jmp .end_update_game_state	
 .not_right_direction:	
 	cmp [snake_direction], 3
 	jne .not_up_direction
 
-	sub [snake_y], 10
+	call move_snake_up
+
 	jmp .end_update_game_state
 .not_up_direction:	
 	cmp [snake_direction], 4
 	jne .end_update_game_state
 
-	add [snake_y], 10
+	call move_snake_down
 
 .end_update_game_state:
 	
 	ret
 add_snake_part:
 	mov [snake_parts], 100
-	mov [snake_parts+1], 50
+	mov [snake_parts+4], 50
 	
-	mov [snake_parts+2], 50
-	mov [snake_parts+3], 50
+	mov [snake_parts+8], 50
+	mov [snake_parts+12], 50
 
-	mov [snake_parts+4], 0
-	mov [snake_parts+5], 50
+	mov [snake_parts+16], 0
+	mov [snake_parts+20], 50
+
+	ret
+
+move_snake_left:
+	xor rdi, rdi
+	xor rsi, rsi
+	xor r12, r12
+
+	mov edi, [snake_parts]
+	mov esi, [snake_parts+4]
+
+	sub dword[snake_parts], 50
+
+	call move_snake_body
+
+	ret
+
+move_snake_right:
+	xor rdi, rdi
+	xor rsi, rsi
+	xor r12, r12
+
+	mov edi, [snake_parts]
+	mov esi, [snake_parts+4]
+
+	add dword[snake_parts], 50
+
+	call move_snake_body
+
+	ret
+
+move_snake_up:
+	xor rdi, rdi
+	xor rsi, rsi
+	xor r12, r12
+
+	mov edi, [snake_parts]
+	mov esi, [snake_parts+4]
+
+	sub dword[snake_parts+4], 50
+
+	call move_snake_body
+
+	ret
+
+move_snake_down:
+	xor rdi, rdi
+	xor rsi, rsi
+	xor r12, r12
+
+	mov edi, [snake_parts]
+	mov esi, [snake_parts+4]
+
+	add dword[snake_parts+4], 50
+
+	call move_snake_body
+
+	ret
+
+move_snake_body:
+	mov [loop_counter], 8 ; snake body starts from 8 byte
+.for_every_part:
+	mov r12, [loop_counter]
+
+	mov r8d, [snake_parts+r12]   ; current body x
+	mov r9d, [snake_parts+r12+4] ; current body y
+	
+	mov [snake_parts+r12], edi
+	mov [snake_parts+r12+4], esi
+
+	mov edi, r8d   ; prev body x to next
+	mov esi, r9d   ; prev body y to next
+	
+	add [loop_counter], 8
+	mov r12, [loop_counter]
+
+	cmp [snake_parts+r12], -1
+	jne .for_every_part
 
 	ret
