@@ -23,12 +23,14 @@ down_arrow_pressed_msg db "down_arrow_pressed_msg", 10, 0
 exited_msg db "Good by!", 10, 0 
 
 is_game_running db 0
+is_game_over db 0
+is_game_need_restart db 0
 
 loop_counter dq 0
 loop_counter_dd dd 0
 
 snake_direction db DIRECTION_NONE
-snake_parts dd 50 dup (-1,-1) ; 200 bytes for 50 snake parts (0 - x, 1 - y), (2 - x, 3 - y)  ... etc
+snake_parts dd 50 dup (-1,-1), 0 ; 200 bytes for 50 snake parts (0 - x, 1 - y), (2 - x, 3 - y)  ... etc
 snake_parts_count dd 0
 snake_movement_counter dq 0
 snake_speed dq 500
@@ -48,7 +50,10 @@ red_color SDL_Color 255, 0, 0, 0
 blue_color SDL_Color 0, 0, 255, 0
 
 font_path db "./resources/Sans.ttf", 0
-start_message db "Press an arrow key to start", 0
+start_message db "Press an <arrow key> to start", 0
+game_over_message db "Game over", 0
+press_space_message db "Press <space> to restart", 0
+print_message db ?
 messageRect SDL_Rect 0,0,0,0
 backgroundRect SDL_Rect 0,0,0,0
 
@@ -127,14 +132,13 @@ main:
     cmp rax, 0
     je create_window_err
 
-	call create_food
-	call create_snake
-
+	call start_new_game
 	mov [is_game_running], 1
 
 game_loop:
+	call update_game_state
+
 	call handle_events
-	call updage_game_state
 
     mov rdi, [window]
     call SDL_UpdateWindowSurface
@@ -146,10 +150,23 @@ game_loop:
 	call display_food
 
 	cmp [snake_direction], DIRECTION_NONE
-	jne .already_moving
+	jne .game_over_check
 	call print_start_message
 
-.already_moving:
+.game_over_check:
+
+	cmp [is_game_over], 1
+	jne .need_restart_check
+
+	call print_game_over
+
+.need_restart_check:
+	cmp [is_game_need_restart], 1
+	jne .render_part
+
+	call start_new_game
+
+.render_part:
     mov rdi, [renderer]
     call SDL_RenderPresent
 
@@ -303,6 +320,12 @@ handle_up_arrow_key:
 	call printMessage
 .end:
 	ret
+handle_space_arrow_key:
+	
+	mov [is_game_need_restart], 1
+
+	ret
+
 handle_down_arrow_key:
 	cmp [snake_direction], DIRECTION_UP
 	je .end
@@ -421,10 +444,13 @@ display_food:
 
 	ret	
 
-updage_game_state:
+update_game_state:
+	cmp [is_game_over], 1
+	je .end
+
 	mov rax, [snake_speed]
 	cmp [snake_movement_counter], rax
-	jne .end_update_game_state
+	jl .end_update_game_state
 
 	mov [snake_movement_counter], 0
 
@@ -437,7 +463,7 @@ updage_game_state:
 .not_left_direction:
 	cmp [snake_direction], DIRECTION_RIGHT
 	jne .not_right_direction
-
+	call log_here_message
 	call move_snake_right
 
 	jmp .end_update_game_state	
@@ -468,13 +494,26 @@ updage_game_state:
 
 	call is_snake_collided_itself
 	cmp rax, 0
-	je .snake_not_collided_itself
+	je .end
 
 	call set_game_over
 
-.snake_not_collided_itself:
+.end:
 	ret
 create_snake:
+	xor rax, rax
+.foreach_snake_parts:
+	cmp [snake_parts_count], 0
+	je .create_new_body
+
+	mov [snake_parts+rax], -1
+	mov [snake_parts+rax+4], -1
+
+	add rax, 8
+	sub [snake_parts_count], 1
+	jmp .foreach_snake_parts
+
+.create_new_body:
 	mov [snake_parts], 100
 	mov [snake_parts+4], 50
 	
@@ -716,7 +755,7 @@ is_snake_collided_itself:
 .end:
 	ret
 set_game_over:
-	mov [is_game_running], 0
+	mov [is_game_over], 1
 
 	ret
 is_food_created_on_snake:
@@ -815,9 +854,16 @@ handle_events:
 
 .not_up:
 	cmp rdi, SDL_DOWN_ARROW_KEY ; down arrow
-	jne .eventHandlingLoop
+	jne .not_down
 
 	call handle_down_arrow_key
+	jmp .afterEventHandling
+
+.not_down:
+	cmp rdi, SDLK_SPACE
+	jne .eventHandlingLoop
+
+	call handle_space_arrow_key
 	jmp .afterEventHandling
 
 .afterEventHandling:
@@ -851,6 +897,50 @@ print_start_message:
 
 	mov rdi, messageRect
 	mov rsi, blue_color
+	mov rdx, start_message
+	call print_text
+
+	pop rdi
+	ret
+
+print_game_over:
+	push rdi
+
+	mov rdi, [renderer]
+	mov rsi, 0
+	mov rdx, 0
+	mov rcx, 0
+	mov r8, 0
+    call SDL_SetRenderDrawColor
+
+    mov [backgroundRect.x], 80
+    mov [backgroundRect.y], 180
+    mov [backgroundRect.w], 350
+    mov [backgroundRect.h], 250
+
+    mov rdi, [renderer]
+    mov rsi, backgroundRect
+    call SDL_RenderFillRect
+
+	mov [messageRect.x], 100
+	mov [messageRect.y], 200
+	mov [messageRect.w], 300
+	mov [messageRect.h], 100
+
+	mov rdi, messageRect
+	mov rsi, red_color
+	mov rdx, game_over_message
+	call print_text
+
+
+	mov [messageRect.x], 100
+	mov [messageRect.y], 300
+	mov [messageRect.w], 300
+	mov [messageRect.h], 100
+
+	mov rdi, messageRect
+	mov rsi, red_color
+	mov rdx, press_space_message
 	call print_text
 
 	pop rdi
@@ -858,6 +948,7 @@ print_start_message:
 
 print_text:
 	push rdi
+	mov r14, rdx ;  message text
 	mov r15, rdi ; message rect
 	mov rbp, rsi ; message text color
 
@@ -874,7 +965,7 @@ print_text:
 	mov r12, rax ; FONT sans in r12
 
 	mov rdi, r12
-	mov rsi, start_message
+	mov rsi, r14
 	mov rdx, [rbp]
 	call TTF_RenderText_Solid
 	
@@ -918,3 +1009,14 @@ print_text:
 .end:
 	pop rdi
 	ret	
+
+start_new_game:
+	call create_snake
+	call create_food
+
+	mov [is_game_over], 0
+	mov [is_game_need_restart], 0
+	mov [snake_direction], DIRECTION_NONE
+	mov [snake_speed], 500
+
+	ret
