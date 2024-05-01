@@ -41,8 +41,8 @@ foodY dd 0
 window rq 1
 renderer rq 1
 mainRect SDL_Rect 0,0,0,0
+window_title db "Snake", 0
 event rq 256/8 
-create_window_arg0 db "Snake", 0
 
 ; Code segment 
 section ".text" executable
@@ -83,7 +83,7 @@ main:
 	cmp rax, 0
 	jl init_err
 
-	mov rdi, create_window_arg0
+	mov rdi, window_title
 	mov rsi, WINDOW_X_POSITION
 	mov rdx, WINDOW_Y_POSITION
 	mov rcx, WINDOW_WIDTH
@@ -115,57 +115,7 @@ main:
 	mov [is_game_running], 1
 
 game_loop:
-
-.eventHandlingLoop:
-	mov rdi,event
-	call SDL_PollEvent
-
-	cmp rax, 0
-	je .afterEventHandling
-
-	mov rax, event
-	cmp dword[rax], SDL_QUIT
-	jne .not_quit
-	
-	mov [is_game_running], 0
-	jmp .afterEventHandling
-
-.not_quit:
-	cmp dword[rax], SDL_KEYDOWN
-	jne .eventHandlingLoop
-
-	xor rdi, rdi
-
-	mov edi, dword [rax+20]  ; key.keysym.sym
-
-	cmp rdi, SDL_LEFT_ARROW_KEY ; left arrow
-	jne .not_left
-	
-	call handle_left_arrow_key
-	jmp .afterEventHandling
-
-.not_left:
-	cmp rdi, SDL_RIGHT_ARROW_KEY ; right arrow
-	jne .not_right
-
-	call handle_right_arrow_key
-	jmp .afterEventHandling
-
-.not_right:
-	cmp rdi, SDL_UP_ARROW_KEY ; up arrow
-	jne .not_up
-	
-	call handle_up_arrow_key
-	jmp .afterEventHandling
-
-.not_up:
-	cmp rdi, SDL_DOWN_ARROW_KEY ; down arrow
-	jne .eventHandlingLoop
-
-	call handle_down_arrow_key
-	jmp .afterEventHandling
-
-.afterEventHandling:
+	call handle_events
 	call updage_game_state
 
     mov rdi, [window]
@@ -794,4 +744,59 @@ speed_up_snake:
 	sub [snake_speed], 10
 
 .end:
+	ret	
+handle_events:
+	push rdi
+
+.eventHandlingLoop:
+	mov rdi,event
+	call SDL_PollEvent
+	cmp rax, 0
+	je .afterEventHandling
+
+	mov rax, event
+	cmp dword[rax], SDL_QUIT
+	jne .not_quit
+	
+	mov [is_game_running], 0
+	jmp .afterEventHandling
+
+.not_quit:
+	cmp dword[rax], SDL_KEYDOWN
+	jne .eventHandlingLoop
+
+	xor rdi, rdi
+
+	mov edi, dword [rax+20]  ; key.keysym.sym
+
+	cmp rdi, SDL_LEFT_ARROW_KEY ; left arrow
+	jne .not_left
+	
+	call handle_left_arrow_key
+	jmp .afterEventHandling
+
+.not_left:
+	cmp rdi, SDL_RIGHT_ARROW_KEY ; right arrow
+	jne .not_right
+
+	call handle_right_arrow_key
+	jmp .afterEventHandling
+
+.not_right:
+	cmp rdi, SDL_UP_ARROW_KEY ; up arrow
+	jne .not_up
+	
+	call handle_up_arrow_key
+	jmp .afterEventHandling
+
+.not_up:
+	cmp rdi, SDL_DOWN_ARROW_KEY ; down arrow
+	jne .eventHandlingLoop
+
+	call handle_down_arrow_key
+	jmp .afterEventHandling
+
+.afterEventHandling:
+	pop rdi
+
 	ret	
