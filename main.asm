@@ -9,7 +9,10 @@ section '.data' writeable
 hello db 'Hello, +++++', 0
 world db ' world!', 0
 formatStr db "%s", 0
-formatInt db "%d", 0
+formatInt db '%d', 10, 0
+
+empty_string db " "
+
 concated rb 16
 init_err_msg            db "SDL_Init Error: %s", 10, 0
 create_window_arg0      db "Hello World!", 0
@@ -27,6 +30,7 @@ exited_msg db "exited", 10, 0
 is_game_running db 0
 
 loop_counter dq 0
+loop_counter_dd dd 0
 
 snake_direction db 2
 snake_parts dd 50 dup (-1,-1) ; 100 bytes for 50 snake parts (0 - x, 1 - y), (2 - x, 3 - y)  ... etc
@@ -314,7 +318,7 @@ printInteger:
 	mov rdi, formatInt
 	;mov rsi, 50
 	call printf
-	
+
 	mov rsp, rbp
 	xor rax, rax
 
@@ -487,6 +491,14 @@ updage_game_state:
 	call create_food
 
 .not_collided:
+
+	call is_snake_collided_itself
+	cmp rax, 0
+	je .snake_not_collided_itself
+
+	call set_game_over
+
+.snake_not_collided_itself:
 	ret
 create_snake:
 	mov [snake_parts], 100
@@ -682,3 +694,49 @@ is_snake_collided_food:
 	mov rax, 0
 .end:
 	ret	
+is_snake_collided_itself:
+	xor rax, rax
+
+	mov [loop_counter_dd], 1
+.foreach_snake_parts_1:
+	xor rax, rax
+	xor rdx, rdx
+	xor rdi, rdi
+
+	mov r8d, [snake_parts]
+	mov r9d, [snake_parts+4]
+
+	mov eax, [loop_counter_dd]
+	mov edx, 8
+
+	mul edx
+
+	mov edi, [snake_parts+eax]
+	cmp edi, r8d
+	jne .incrementor
+
+	mov edi, [snake_parts+eax+4]
+	cmp edi, r9d
+	je .snake_collided_itself
+
+.incrementor:
+	add [loop_counter_dd], 1
+
+	mov edi, [snake_parts_count]
+	mov edx, [loop_counter_dd]
+	cmp edx, edi
+	jle .foreach_snake_parts_1
+	
+	jmp .snake_not_collided_itself
+
+.snake_collided_itself:
+	mov rax, 1
+	jmp .end
+.snake_not_collided_itself:
+	mov rax, 0
+.end:
+	ret
+set_game_over:
+	mov [is_game_running], 0
+
+	ret
