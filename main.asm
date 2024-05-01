@@ -6,7 +6,7 @@ include 'sdl.inc'
 include 'constants.inc'
 
 formatStr db "%s", 0
-formatInt db '%d', 10, 0
+formatInt db '%d', 0
 empty_string db " "
 
 init_err_msg            db "SDL_Init Error: %s", 10, 0
@@ -53,15 +53,17 @@ font_path db "./resources/Sans.ttf", 0
 start_message db "Press an <arrow key> to start", 0
 game_over_message db "Game over", 0
 press_space_message db "Press <space> to restart", 0
+score_message db "Score: ", 0
 print_message db ?
 messageRect SDL_Rect 0,0,0,0
 backgroundRect SDL_Rect 0,0,0,0
-
+buf rb 250
 ; Code segment 
 section ".text" executable
 
 public main
 extrn printf
+extrn sprintf
 extrn SDL_Init
 extrn SDL_CreateWindow
 extrn SDL_CreateRenderer
@@ -148,6 +150,7 @@ game_loop:
     call display_main_scene
     call display_snake
 	call display_food
+	call print_score
 
 	cmp [snake_direction], DIRECTION_NONE
 	jne .game_over_check
@@ -941,6 +944,58 @@ print_game_over:
 	mov rdi, messageRect
 	mov rsi, red_color
 	mov rdx, press_space_message
+	call print_text
+
+	pop rdi
+	ret
+
+print_score:
+	push rdi
+
+mov rdi, [renderer]
+	mov rsi, 0
+	mov rdx, 0
+	mov rcx, 0
+	mov r8, 0
+    call SDL_SetRenderDrawColor
+
+    mov [backgroundRect.x], 500
+    mov [backgroundRect.y], 0
+    mov [backgroundRect.w], 350
+    mov [backgroundRect.h], WINDOW_HEIGHT
+
+    mov rdi, [renderer]
+    mov rsi, backgroundRect
+    call SDL_RenderFillRect
+
+	mov [messageRect.x], 550
+	mov [messageRect.y], 100
+	mov [messageRect.w], 200
+	mov [messageRect.h], 100
+
+	mov rdi, messageRect
+	mov rsi, blue_color
+	mov rdx, score_message
+	call print_text
+
+	mov [messageRect.x], 750
+	mov [messageRect.y], 120
+	mov [messageRect.w], 80
+	mov [messageRect.h], 80
+
+	mov rax, qword[snake_parts_count]
+	sub rax, 3
+	mov rdx, 100
+	mul rdx
+
+    mov rdi, buf
+    mov rsi, formatInt
+    mov rdx, rax
+    call sprintf
+
+	mov rdi, messageRect
+	mov rsi, blue_color
+	mov rdx, buf
 	call print_text
 
 	pop rdi
