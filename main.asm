@@ -1,21 +1,15 @@
 format ELF64
 
-
 section '.data' writeable
 
-    include 'sdl.inc'
+include 'sdl.inc'
+include 'constants.inc'
 
-
-hello db 'Hello, +++++', 0
-world db ' world!', 0
 formatStr db "%s", 0
 formatInt db '%d', 10, 0
-
 empty_string db " "
 
-concated rb 16
 init_err_msg            db "SDL_Init Error: %s", 10, 0
-create_window_arg0      db "Hello World!", 0
 create_window_err_msg   db "SDL_CreateWindow Error: %s", 10, 0
 create_renderer_err_msg db "SDL_CreateRenderer Error: %s", 10, 0
 render_fill_error_msg db "SDL_RenderFillRect Error: %s", 10, 0
@@ -26,45 +20,29 @@ left_arrow_pressed_msg db "left_arrow_pressed_msg", 10, 0
 right_arrow_pressed_msg db "right_arrow_pressed_msg", 10, 0 
 up_arrow_pressed_msg db "up_arrow_pressed_msg", 10, 0 
 down_arrow_pressed_msg db "down_arrow_pressed_msg", 10, 0 
-exited_msg db "exited", 10, 0 
+exited_msg db "Good by!", 10, 0 
+
 is_game_running db 0
 
 loop_counter dq 0
 loop_counter_dd dd 0
 
 snake_direction db 2
-snake_parts dd 50 dup (-1,-1) ; 100 bytes for 50 snake parts (0 - x, 1 - y), (2 - x, 3 - y)  ... etc
+snake_parts dd 50 dup (-1,-1) ; 200 bytes for 50 snake parts (0 - x, 1 - y), (2 - x, 3 - y)  ... etc
 snake_parts_count dd 0
-event db 56 dup (?) ; SDL_Event type
-sdl_eventbuf rq 256/8
-
-mainRect SDL_Rect 0,0,0,0
+snake_movement_counter dq 0
+snake_speed dq 500
 snakeRect SDL_Rect 10,10,10,10
 
 foodRect SDL_Rect 0, 0, 0, 0
 foodX dd 0
 foodY dd 0
 
-snake_x dq 0
-snake_y dq 0
-
-snake_speed dq 500
-
 window rq 1
 renderer rq 1
-
-snake_movement_counter dq 0
-
-GAME_AREA_WIDTH = 500
-GAME_AREA_HEIGHT = 500
-
-DIRECTION_LEFT = 1
-DIRECTION_RIGHT = 2
-DIRECTION_UP = 3
-DIRECTION_DOWN = 4
-
-SEED_X = 100
-SEED_Y = 200
+mainRect SDL_Rect 0,0,0,0
+event rq 256/8 
+create_window_arg0 db "Snake", 0
 
 ; Code segment 
 section ".text" executable
@@ -99,28 +77,23 @@ extrn time
 
 main:
     push rsp
-	;mov rbp, rsp; for correct debugging
-    ;and rsp, -16
 
-	;call log_here_message
-
-    mov rdi, 62001
+    mov rdi, SDL_INIT_EVERYTHING
 	call SDL_Init
 	cmp rax, 0
 	jl init_err
 
 	mov rdi, create_window_arg0
-	mov rsi, 100
-	mov rdx, 100
-	mov rcx, 960
-	mov r8, 720
-	mov r9, 4
+	mov rsi, WINDOW_X_POSITION
+	mov rdx, WINDOW_Y_POSITION
+	mov rcx, WINDOW_WIDTH
+	mov r8, WINDOW_HEIGHT
+	mov r9, SDL_WINDOW_SHOWN
 	call SDL_CreateWindow
 	cmp rax, 0
 	je create_window_err
 
-	mov r12, rax ; window pointer
-    mov [window], r12
+    mov [window], rax
 
 	mov rdi, rax
 	mov rsi, -1
@@ -129,8 +102,7 @@ main:
 	cmp rax, 0
 	je create_renderer_err
 
-	mov r13, rax ; renderer pointer
-    mov [renderer], r13
+    mov [renderer], rax
 
     mov rdi, [window]
     call SDL_GetWindowSurface
@@ -144,59 +116,56 @@ main:
 
 game_loop:
 
-eventHandlingLoop:
-	mov rdi,sdl_eventbuf
+.eventHandlingLoop:
+	mov rdi,event
 	call SDL_PollEvent
 
 	cmp rax, 0
-	je afterEventHandling
+	je .afterEventHandling
 
-	mov rax, sdl_eventbuf
-	cmp dword[rax], 0x0100 ; SDL_QUIT
+	mov rax, event
+	cmp dword[rax], SDL_QUIT
 	jne .not_quit
 	
 	mov [is_game_running], 0
-	jmp afterEventHandling
+	jmp .afterEventHandling
 
 .not_quit:
-	cmp dword[rax], 0x0300; SDL_KEYDOWN
-	jne eventHandlingLoop
+	cmp dword[rax], SDL_KEYDOWN
+	jne .eventHandlingLoop
 
-	;call log_here_message
-	;call log_here_message
 	xor rdi, rdi
-	;mov rdi, qword[rax+20]
 
-	mov edi, dword [rax+20]  ; kev.keysym.sym
+	mov edi, dword [rax+20]  ; key.keysym.sym
 
-	cmp rdi, 1073741904 ; left arrow
+	cmp rdi, SDL_LEFT_ARROW_KEY ; left arrow
 	jne .not_left
 	
 	call handle_left_arrow_key
-	jmp afterEventHandling
+	jmp .afterEventHandling
 
 .not_left:
-	cmp rdi, 1073741903 ; right arrow
+	cmp rdi, SDL_RIGHT_ARROW_KEY ; right arrow
 	jne .not_right
 
 	call handle_right_arrow_key
-	jmp afterEventHandling
+	jmp .afterEventHandling
 
 .not_right:
-	cmp rdi, 1073741906 ; up arrow
+	cmp rdi, SDL_UP_ARROW_KEY ; up arrow
 	jne .not_up
 	
 	call handle_up_arrow_key
-	jmp afterEventHandling
+	jmp .afterEventHandling
 
 .not_up:
-	cmp rdi, 1073741905 ; down arrow
-	jne eventHandlingLoop
+	cmp rdi, SDL_DOWN_ARROW_KEY ; down arrow
+	jne .eventHandlingLoop
 
 	call handle_down_arrow_key
-	jmp afterEventHandling
+	jmp .afterEventHandling
 
-afterEventHandling:
+.afterEventHandling:
 	call updage_game_state
 
     mov rdi, [window]
@@ -205,7 +174,6 @@ afterEventHandling:
 	jne update_window_surface_error
     
     call display_main_scene
-
     call display_snake
 	call display_food
 
