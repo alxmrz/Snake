@@ -27,7 +27,7 @@ is_game_running db 0
 loop_counter dq 0
 loop_counter_dd dd 0
 
-snake_direction db 2
+snake_direction db DIRECTION_NONE
 snake_parts dd 50 dup (-1,-1) ; 200 bytes for 50 snake parts (0 - x, 1 - y), (2 - x, 3 - y)  ... etc
 snake_parts_count dd 0
 snake_movement_counter dq 0
@@ -43,6 +43,14 @@ renderer rq 1
 mainRect SDL_Rect 0,0,0,0
 window_title db "Snake", 0
 event rq 256/8 
+
+red_color SDL_Color 255, 0, 0, 0
+blue_color SDL_Color 0, 0, 255, 0
+
+font_path db "./resources/Sans.ttf", 0
+start_message db "Press an arrow key to start", 0
+messageRect SDL_Rect 0,0,0,0
+backgroundRect SDL_Rect 0,0,0,0
 
 ; Code segment 
 section ".text" executable
@@ -71,6 +79,12 @@ extrn SDL_RenderFillRect
 extrn SDL_RenderDrawRect
 extrn SDL_GetWindowSurface
 extrn SDL_PollEvent
+extrn TTF_Init
+extrn TTF_Quit
+extrn TTF_OpenFont
+extrn TTF_RenderText_Solid
+extrn TTF_GetError
+extrn TTF_CloseFont
 extrn random
 extrn srand
 extrn time
@@ -80,6 +94,10 @@ main:
 
     mov rdi, SDL_INIT_EVERYTHING
 	call SDL_Init
+	cmp rax, 0
+	jl init_err
+
+	call TTF_Init
 	cmp rax, 0
 	jl init_err
 
@@ -127,6 +145,11 @@ game_loop:
     call display_snake
 	call display_food
 
+	cmp [snake_direction], DIRECTION_NONE
+	jne .already_moving
+	call print_start_message
+
+.already_moving:
     mov rdi, [renderer]
     call SDL_RenderPresent
 
@@ -141,6 +164,7 @@ game_loop:
 	call SDL_DestroyRenderer
 	mov rdi, [window]
 	call SDL_DestroyWindow
+	call TTF_Quit
 	call SDL_Quit
 	mov rdi, 0
 	jmp exit
@@ -799,4 +823,98 @@ handle_events:
 .afterEventHandling:
 	pop rdi
 
+	ret	
+
+print_start_message:
+	push rdi
+
+	mov rdi, [renderer]
+	mov rsi, 0
+	mov rdx, 108
+	mov rcx, 0
+	mov r8, 0
+    call SDL_SetRenderDrawColor
+
+    mov [backgroundRect.x], 90
+    mov [backgroundRect.y], 190
+    mov [backgroundRect.w], 310
+    mov [backgroundRect.h], 110
+
+    mov rdi, [renderer]
+    mov rsi, backgroundRect
+    call SDL_RenderFillRect
+
+	mov [messageRect.x], 100
+	mov [messageRect.y], 200
+	mov [messageRect.w], 300
+	mov [messageRect.h], 100
+
+	mov rdi, messageRect
+	mov rsi, blue_color
+	call print_text
+
+	pop rdi
+	ret
+
+print_text:
+	push rdi
+	mov r15, rdi ; message rect
+	mov rbp, rsi ; message text color
+
+	xor rdi, rdi
+	xor rsi, rsi
+	
+	mov rdi, font_path
+	mov rsi, 24
+	call TTF_OpenFont
+
+	cmp rax, 0
+	je .no_font
+
+	mov r12, rax ; FONT sans in r12
+
+	mov rdi, r12
+	mov rsi, start_message
+	mov rdx, [rbp]
+	call TTF_RenderText_Solid
+	
+	cmp rax, 0
+	je .no_font
+
+	mov r13, rax ; surfaceMessage in r13
+
+	mov rdi, [renderer]
+	mov rsi, r13
+	call SDL_CreateTextureFromSurface
+
+	cmp rax, 0
+	je .no_font
+
+	mov r14, rax ; SDL_Texture message
+
+	mov rdi, [renderer]
+	mov rsi, r14
+	mov rdx, 0
+	mov rcx, r15
+	call SDL_RenderCopy
+
+	mov rdi, r12
+	call TTF_CloseFont
+
+	mov rdi, r14
+	call SDL_DestroyTexture
+
+	mov rdi, r13
+	call SDL_FreeSurface
+
+	jmp .end
+.no_font:
+	call SDL_GetError
+	mov rsi, rax
+	mov rdi, formatStr
+	call printf
+
+	jmp .end
+.end:
+	pop rdi
 	ret	

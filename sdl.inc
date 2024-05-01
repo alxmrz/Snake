@@ -6,6 +6,14 @@ struc SDL_Rect x,y,width,height
     .h dd height
 }
 
+struc SDL_Color r,g,b,a
+{
+    .r db r
+    .g db g
+    .b db b
+    .a db a
+}
+
 SDL_INIT_EVERYTHING = 62001
 SDL_WINDOW_SHOWN = 4
 
