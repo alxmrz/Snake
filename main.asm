@@ -48,6 +48,8 @@ foodY dd 0
 snake_x dq 0
 snake_y dq 0
 
+snake_speed dq 500
+
 window rq 1
 renderer rq 1
 
@@ -450,7 +452,8 @@ display_food:
 	ret	
 
 updage_game_state:
-	cmp [snake_movement_counter], 100
+	mov rax, [snake_speed]
+	cmp [snake_movement_counter], rax
 	jne .end_update_game_state
 
 	mov [snake_movement_counter], 0
@@ -487,6 +490,7 @@ updage_game_state:
 	cmp rax, 0
 	je .not_collided
 
+	call speed_up_snake
 	call add_snake_part
 	call create_food
 
@@ -634,6 +638,7 @@ move_snake_body:
 
 	ret
 create_food:
+.start_food_creation:
 	mov rdi, SEED_X
 	call get_random_coord
 
@@ -643,6 +648,10 @@ create_food:
 	call get_random_coord
 
 	mov [foodY], eax
+
+	call is_food_created_on_snake
+	cmp rax, 1
+	je .start_food_creation
 
 	ret	
 
@@ -740,3 +749,53 @@ set_game_over:
 	mov [is_game_running], 0
 
 	ret
+is_food_created_on_snake:
+
+	mov [loop_counter_dd], 0
+.foreach_snake_parts_1:
+	xor rax, rax
+	xor rdx, rdx
+	xor rdi, rdi
+
+	mov r8d, [foodX]
+	mov r9d, [foodY]
+
+	mov eax, [loop_counter_dd]
+	mov edx, 8
+
+	mul edx
+
+	mov edi, [snake_parts+eax]
+	cmp edi, r8d
+	jne .incrementor
+
+	mov edi, [snake_parts+eax+4]
+	cmp edi, r9d
+	je .wrong_creation
+
+.incrementor:
+	add [loop_counter_dd], 1
+
+	mov edi, [snake_parts_count]
+	mov edx, [loop_counter_dd]
+	cmp edx, edi
+	jle .foreach_snake_parts_1
+	
+	jmp .good_creation
+
+.wrong_creation:
+	; TODO: too often wrong creation, need fix coords' randomnes
+	mov rax, 1
+	jmp .end
+.good_creation:
+	mov rax, 0
+.end:
+	ret
+speed_up_snake:
+	cmp [snake_speed], 50
+	jle .end
+
+	sub [snake_speed], 10
+
+.end:
+	ret	
