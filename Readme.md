@@ -1,6 +1,6 @@
 # Snake
 
-[<img src="./resources/Snake.png" width="300" height="400" />](./resources/Snake.png)
+[<img src="./resources/Snake.png" width="600" height="400" />](./resources/Snake.png)
 
 This is classic game made with FASM and SDL2.
 
