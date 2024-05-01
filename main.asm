@@ -394,6 +394,10 @@ display_main_scene:
 
 	ret
 display_snake:
+    
+	mov [loop_counter], 0
+
+.foreach_snake_parts:
 	mov rdi, [renderer]
 	mov rsi, 255
 	mov rdx, 0
@@ -402,20 +406,13 @@ display_snake:
     call SDL_SetRenderDrawColor
     cmp rax, 0
 	jne set_render_draw_color_error
-    
-	mov [loop_counter], 0
 
-.foreach_snake_parts:
 	xor rcx, rcx;
 	xor rdi, rdi;
 
 	mov rcx, [loop_counter]
 	mov edi, [snake_parts+rcx]
 	mov [snakeRect.x], edi
-
-	;mov rsi, [loop_counter]
-	;call printInteger
-	;call log_here_message
 
 	mov rcx, [loop_counter]
 	mov edi,[snake_parts+rcx+4]
@@ -424,11 +421,25 @@ display_snake:
     mov [snakeRect.w], 50
     mov [snakeRect.h], 50
 
-	;xor rdi, rdi
-
     mov rdi, [renderer]
     mov rsi, snakeRect
     call SDL_RenderFillRect
+	cmp rax, 0
+	jne render_fill_error
+
+	mov rdi, [renderer]
+	mov rsi, 0
+	mov rdx, 0
+	mov rcx, 0
+	mov r8, 0
+    call SDL_SetRenderDrawColor
+    cmp rax, 0
+	jne set_render_draw_color_error
+
+
+    mov rdi, [renderer]
+    mov rsi, snakeRect
+    call SDL_RenderDrawRect
 	cmp rax, 0
 	jne render_fill_error
 
