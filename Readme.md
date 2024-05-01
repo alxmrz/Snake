@@ -1,5 +1,7 @@
 # Snake
 
+[<img src="./resources/Snake.png" width="300" height="400" />](./resources/Snake.png)
+
 This is classic game made with FASM and SDL2.
 
 Run `make bar` to build and run the game.

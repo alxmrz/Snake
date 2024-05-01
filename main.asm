@@ -366,6 +366,20 @@ display_snake:
     mov [loop_counter], 0
 
 .foreach_snake_parts:
+    cmp [loop_counter], 0
+    jne .not_head
+
+    mov rdi, [renderer]
+    mov rsi, 255
+    mov rdx, 255
+    mov rcx, 0
+    mov r8, 0
+    call SDL_SetRenderDrawColor
+    cmp rax, 0
+    jne set_render_draw_color_error
+
+    jmp .after_coloring
+.not_head:
     mov rdi, [renderer]
     mov rsi, 255
     mov rdx, 0
@@ -374,7 +388,7 @@ display_snake:
     call SDL_SetRenderDrawColor
     cmp rax, 0
     jne set_render_draw_color_error
-
+.after_coloring:
     xor rcx, rcx;
     xor rdi, rdi;
 
