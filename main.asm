@@ -58,6 +58,11 @@ snake_movement_counter dq 0
 GAME_AREA_WIDTH = 500
 GAME_AREA_HEIGHT = 500
 
+DIRECTION_LEFT = 1
+DIRECTION_RIGHT = 2
+DIRECTION_UP = 3
+DIRECTION_DOWN = 4
+
 SEED_X = 100
 SEED_Y = 200
 
@@ -327,32 +332,44 @@ printInteger:
 	ret
 
 handle_left_arrow_key:
-	mov [snake_direction], 1
+	cmp [snake_direction], DIRECTION_RIGHT
+	je .end
+
+	mov [snake_direction], DIRECTION_LEFT
 
 	mov rdi, left_arrow_pressed_msg
 	call printMessage
-
+.end:
 	ret
 handle_right_arrow_key:
-	mov [snake_direction], 2
+	cmp [snake_direction], DIRECTION_LEFT
+	je .end
+
+	mov [snake_direction], DIRECTION_RIGHT
 
 	mov rdi, right_arrow_pressed_msg
 	call printMessage
-
+.end:
 	ret
 handle_up_arrow_key:
-	mov [snake_direction], 3
+	cmp [snake_direction], DIRECTION_DOWN
+	je .end
+
+	mov [snake_direction], DIRECTION_UP
 
 	mov rdi, up_arrow_pressed_msg
 	call printMessage
-
+.end:
 	ret
 handle_down_arrow_key:
-	mov [snake_direction], 4
+	cmp [snake_direction], DIRECTION_UP
+	je .end
+
+	mov [snake_direction], DIRECTION_DOWN
 
 	mov rdi, down_arrow_pressed_msg
 	call printMessage
-
+.end:
 	ret
 display_main_scene:
 	mov rdi, [renderer]
@@ -458,28 +475,28 @@ updage_game_state:
 
 	mov [snake_movement_counter], 0
 
-	cmp [snake_direction], 1
+	cmp [snake_direction], DIRECTION_LEFT
 	jne .not_left_direction
 
 	call move_snake_left
 
 	jmp .end_update_game_state
 .not_left_direction:
-	cmp [snake_direction], 2
+	cmp [snake_direction], DIRECTION_RIGHT
 	jne .not_right_direction
 
 	call move_snake_right
 
 	jmp .end_update_game_state	
 .not_right_direction:	
-	cmp [snake_direction], 3
+	cmp [snake_direction], DIRECTION_UP
 	jne .not_up_direction
 
 	call move_snake_up
 
 	jmp .end_update_game_state
 .not_up_direction:	
-	cmp [snake_direction], 4
+	cmp [snake_direction], DIRECTION_DOWN
 	jne .end_update_game_state
 
 	call move_snake_down
