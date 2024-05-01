@@ -1,6 +1,6 @@
 # Snake
 
-Classic game made with FASM and SDL2.
+This is classic game made with FASM and SDL2.
 
 Run `make bar` to build and run the game.
 
